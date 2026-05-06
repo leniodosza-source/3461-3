@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>纸牌积分器 - 清新版</title>
+<style>
+* {margin: 0;padding: 0;box-sizing: border-box;}
+body {
+  font-family: system-ui, sans-serif;
+  background-color: #f3f7fa;
+  padding: 15px;
+  padding-bottom: 40px;
+}
+h3 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 22px;
+}
+/* 总分面板 */
+.total-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
+}
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.user-item:last-child {border: none;}
+.user-name {font-size: 16px;color: #555;}
+.user-score {font-size: 22px;font-weight: 600;}
+.score-positive {color: #e64340;}
+.score-negative {color: #348eda;}
+.score-zero {color: #666;}
+
+/* 输入区域 */
+.input-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+input {
+  height: 48px;
+  border: 1px solid #dde2e8;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 17px;
+  outline: none;
+}
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+button {
+  flex: 1;
+  height: 48px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+}
+.btn-confirm {background: #27ae60;color: #fff;}
+.btn-undo {background: #ff9500;color: #fff;}
+.btn-reset {background: #ee5253;color: #fff;margin-top:10px;width:100%;}
+
+/* 记录区域 */
+.log-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px;
+}
+.log-item {
+  font-size: 14px;
+  color: #444;
+  padding: 6px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.tip {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  margin-top: 12px;
+}
+</style>
+</head>
+<body>
+<h3>四人纸牌积分器</h3>
+
+<div class="total-card">
+  <div class="user-item"><div class="user-name">东</div><div class="user-score" id="east">0</div></div>
+  <div class="user-item"><div class="user-name">南</div><div class="user-score" id="south">0</div></div>
+  <div class="user-item"><div class="user-name">西</div><div class="user-score" id="west">0</div></div>
+  <div class="user-item"><div class="user-name">北</div><div class="user-score" id="north">0</div></div>
+</div>
+
+<div class="input-card">
+  <div class="input-row">
+    <input type="number" id="rEast" placeholder="东 本轮" value="0">
+    <input type="number" id="rSouth" placeholder="南 本轮" value="0">
+  </div>
+  <div class="input-row">
+    <input type="number" id="rWest" placeholder="西 本轮" value="0">
+    <input type="number" id="rNorth" placeholder="北 本轮" value="0">
+  </div>
+  <div class="btn-row">
+    <button class="btn-confirm" onclick="addRound()">确定本轮</button>
+    <button class="btn-undo" onclick="undoRound()">撤销</button>
+  </div>
+  <button class="btn-reset" onclick="resetAll()">清空全部记录</button>
+</div>
+
+<div class="log-card">
+  <div id="logList"></div>
+</div>
+<div class="tip">每轮自动平衡，四人总分=0</div>
+
+<script>
+let total = {east:0,south:0,west:0,north:0};
+let roundList = [];
+const dom = {
+  east:document.getElementById('east'),
+  south:document.getElementById('south'),
+  west:document.getElementById('west'),
+  north:document.getElementById('north'),
+  rEast:document.getElementById('rEast'),
+  rSouth:document.getElementById('rSouth'),
+  rWest:document.getElementById('rWest'),
+  rNorth:document.getElementById('rNorth'),
+  log:document.getElementById('logList')
+};
+
+function setScore(el,num){
+  el.innerText = num;
+  el.className = "user-score";
+  if(num>0) el.classList.add("score-positive");
+  if(num<0) el.classList.add("score-negative");
+  if(num===0) el.classList.add("score-zero");
+}
+function renderTotal(){
+  setScore(dom.east,total.east);
+  setScore(dom.south,total.south);
+  setScore(dom.west,total.west);
+  setScore(dom.north,total.north);
+}
+function renderLog(){
+  dom.log.innerHTML = "";
+  roundList.forEach((item,i)=>{
+    let d = document.createElement('div');
+    d.className="log-item";
+    d.innerText=`第${i+1}局｜东:${item.east} 南:${item.south} 西:${item.west} 北:${item.north}`;
+    dom.log.appendChild(d);
+  });
+}
+
+function addRound(){
+  let e=Number(dom.rEast.value||0);
+  let s=Number(dom.rSouth.value||0);
+  let w=Number(dom.rWest.value||0);
+  let n=Number(dom.rNorth.value||0);
+  let sum = e+s+w+n;
+  if(sum!==0) n -= sum;
+  roundList.push({east:e,south:s,west:w,north:n});
+  total.east+=e;total.south+=s;total.west+=w;total.north+=n;
+  renderTotal();renderLog();
+  dom.rEast.value=0;dom.rSouth.value=0;dom.rWest.value=0;dom.rNorth.value=0;
+}
+function undoRound(){
+  if(roundList.length===0)return alert("暂无记录");
+  let last = roundList.pop();
+  total.east-=last.east;total.south-=last.south;total.west-=last.west;total.north-=last.north;
+  renderTotal();renderLog();
+}
+function resetAll(){
+  if(!confirm("确定清空所有分数？"))return;
+  total={east:0,south:0,west:0,north:0};
+  roundList=[];renderTotal();renderLog();
+}
+renderTotal();
+</script>
+</body>
+</html>
